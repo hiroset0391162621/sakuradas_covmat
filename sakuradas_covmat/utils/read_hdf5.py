@@ -7,12 +7,11 @@ import time
 
 
 
-def phase2strain(phase):
-    lamda = 1550.12 * 1e-9 ### 光の波長 [m]
-    n = 1.4682 ### 光ファイバーの屈折率
-    xi = 0.78 ### photo-elastic scaling factor
-    G = 9.9259261 ### ゲージ⻑ [m] 
-    return (lamda*phase) / (4*np.pi*n*xi*G)
+def phase2strain(phase, gauge_length):
+    lamda = 1550.12 * 1e-9 
+    n = 1.4682 
+    xi = 0.78
+    return (lamda*phase) / (4*np.pi*n*xi*gauge_length)
 
 
 # JSTに変換する関数
@@ -27,18 +26,16 @@ def read_hdf5(filename, fiber):
     with h5py.File(filename, "r") as h5file:
         raw_data = h5file['Acquisition/Raw[0]/RawData'][:]
         raw_data = np.transpose(raw_data)
-
-        # StartTimeの取得
+        
         start_time_str = h5file["/Acquisition/Raw[0]/RawDataTime"].attrs["StartTime"].decode('utf-8')
         start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
 
-        # EndTimeの取得
         end_time_str = h5file["/Acquisition/Raw[0]/RawDataTime"].attrs["EndTime"].decode('utf-8')
         end_time = datetime.fromisoformat(end_time_str.replace('Z', '+00:00'))
 
-        # OutputDataRateの取得
         output_data_rate = h5file["/Acquisition/Raw[0]"].attrs["OutputDataRate"]
         
+        G = h5file["/Acquisition"].attrs["GaugeLength"]
         
     # StartTimeとEndTimeをJSTに変換
     start_time_jst = to_jst(start_time)
@@ -53,11 +50,13 @@ def read_hdf5(filename, fiber):
 
     st_minute = Stream()
     for i in range(raw_data.shape[0]):
-        tr = Trace(phase2strain(raw_data[i,:]))
+        tr = Trace(phase2strain(raw_data[i,:], G))
         tr.stats.starttime = start_time_jst
         tr.stats.sampling_rate = output_data_rate
         if fiber=='round':
-            tr.stats.channel = "sak"+str(i).zfill(4)
+            tr.stats.channel = "X"
+            tr.stats.network = "SAK"
+            tr.stats.station = str(i).zfill(4)
         elif fiber=='nojiri':
             tr.stats.channel = "X"
             tr.stats.network = "NOJ"

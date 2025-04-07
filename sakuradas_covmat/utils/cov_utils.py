@@ -117,10 +117,10 @@ def network_covmat():
     ax0 = fig.add_subplot(211)
     lapset = np.arange(0, windL, 1/Fs)
     for i in range(len(stream_plot)):
-        ax0.plot(lapset, stream_plot[i].data, lw=0.5, label=stream_plot[i].stats.network.lower()+stream_plot[i].stats.station.replace(" ", ""))
+        ax0.plot(lapset, stream_plot[i].data/np.nanmax(np.abs(stream_plot[i].data)), lw=0.5, label=stream_plot[i].stats.network.lower()+stream_plot[i].stats.station.replace(" ", ""))
     
-    ax0.set_ylabel("Strain", fontsize=12)
-    ax0.set_ylim(-5e-9, 5e-9)
+    ax0.set_ylabel("norm. amp.", fontsize=12)
+    ax0.set_ylim(-1, 1)
     ax0.set_xlim(0, windL)
     #ax0.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0, fontsize=8)
     for spine in ax0.spines.values():
@@ -171,7 +171,7 @@ def network_covmat():
     ax1.tick_params(axis='both', which='minor', length=2, width=0.75)
     ax1.tick_params(which='both', direction='out')
     
-    plt.suptitle(stream_cov[0].stats.starttime.strftime("%Y-%m-%d %H:%M:%S") + " - " + stream_cov[0].stats.endtime.strftime("%Y-%m-%d %H:%M:%S"), fontsize=12)
+    plt.suptitle(fiber+' '+stream_cov[0].stats.starttime.strftime("%Y-%m-%d %H:%M:%S") + " - " + stream_cov[0].stats.endtime.strftime("%Y-%m-%d %H:%M:%S"), fontsize=12)
     
     
     os.makedirs('figure', exist_ok=True)
