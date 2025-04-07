@@ -4,4 +4,9 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = []
+dependencies = [
+    "h5py>=3.13.0",
+    "numpy==1.26.3",
+    "obspy>=1.4.1",
+    "scienceplots>=2.1.1",
+]
