@@ -1,4 +1,5 @@
 import glob
+import os
 import sys
 import datetime
 from obspy.core import Stream
@@ -172,6 +173,9 @@ def network_covmat():
     
     plt.suptitle(stream_cov[0].stats.starttime.strftime("%Y-%m-%d %H:%M:%S") + " - " + stream_cov[0].stats.endtime.strftime("%Y-%m-%d %H:%M:%S"), fontsize=12)
     
+    
+    os.makedirs('figure', exist_ok=True)
+    plt.savefig('figure/specw_'+stream_cov[0].stats.starttime.strftime("%Y%m%d-%H%M%S")+"_"+str(Nseconds).zfill(4)+".png", dpi=300, bbox_inches='tight')
     plt.show()
     
 
