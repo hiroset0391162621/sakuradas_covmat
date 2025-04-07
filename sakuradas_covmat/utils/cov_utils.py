@@ -1,27 +1,11 @@
-
-import os
 import glob
-import copy
-import os.path
-import string
-import shutil
-import pathlib
-import subprocess
 import sys
 import datetime
-import itertools
-import obspy
-from obspy.core import Stream, Trace
-import time
+from obspy.core import Stream
 import numpy as np
 import matplotlib.pyplot as plt
 import warnings
 warnings.simplefilter("ignore")
-
-
-
-import matplotlib as mpl
-
 
 try:
     import scienceplots
@@ -37,19 +21,21 @@ plt.rcParams['xtick.labelsize'] = 10
 plt.rcParams['ytick.labelsize'] = 10
 
 sys.path.append("../cov")
+sys.path.append("cov")
 import covariancematrix
 import array_cov
 
 from read_hdf5 import read_hdf5
 
+sys.path.append("../")
+from Params import *
+
 
 
 def network_covmat():
-    fiber = 'nojiri' #'round'
-    Fs = 100.0
     
-    hdf5_starttime_jst = datetime.datetime(2023, 12, 1, 0, 0, 0)
-    hdf5_endttime_jst = datetime.datetime(2023, 12, 1, 0, 10, 0)
+    
+    
     N_minute = int( (hdf5_endttime_jst - hdf5_starttime_jst).total_seconds() / 60.0 )
     windL = 60.0*N_minute
     print("N_minute", N_minute)
@@ -59,7 +45,7 @@ def network_covmat():
     for mm in range(N_minute):
         ts_utc = hdf5_starttime_utc + datetime.timedelta(minutes=mm)
         filename = glob.glob(
-            "../hdf5/decimator_"+ts_utc.strftime("%Y-%m-%d_%H.%M.%S")+"_UTC_"+"*.h5"
+            hdf5_dirname+"decimator_"+ts_utc.strftime("%Y-%m-%d_%H.%M.%S")+"_UTC_"+"*.h5"
         )[0] 
         print(filename)     
         hdf5_file_list.append(filename)
@@ -74,7 +60,7 @@ def network_covmat():
     print(stream_minute)
 
     stream_cov = array_cov.ArrayStream()
-    used_channel_list = [str(_).zfill(4) for _ in range(100, 805, 5)]    
+
     print('channels', used_channel_list)
     for tr in stream_minute:
         if tr.stats.station in used_channel_list:
@@ -83,16 +69,11 @@ def network_covmat():
     
     
     # frequency limits for filtering (depends on the target signal)
-    low_pass = 0.2
-    high_pass = 50
+    
     sampling_rate = stream_cov[
         0
     ].stats.sampling_rate  # assumes all streams have the same sampling rate
 
-    # optimized for tremors
-    overlap = 0.5  ### [0,1] step for sliding main windows-> preproc_spectral_secs*overlap
-    average = 10
-    window_duration_sec = 5.0
 
     preproc_spectral_secs = (
         window_duration_sec * average * overlap
