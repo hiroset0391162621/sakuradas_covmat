@@ -1,3 +1,3 @@
 桜島DASデータを用いてspectral width（Seydoux et al., 2016）を計算するpythonスクリプト．
 
-![specw_20231201-000000_0600](https://github.com/user-attachments/assets/4fc332a1-cd44-4f84-98c5-a3dac2e98ed0)
+![specw_20250327-000000_86400_10s](https://github.com/user-attachments/assets/6e1730a5-e7f7-4a03-ad49-7883371ef131)
