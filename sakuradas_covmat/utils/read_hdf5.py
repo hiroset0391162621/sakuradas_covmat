@@ -22,8 +22,8 @@ def to_jst(utc_time):
 
 
 def read_hdf5(filename, fiber, channels):
-    zw
-    with h5py.File(filename, "r") as h5file:xw
+    
+    with h5py.File(filename, "r") as h5file:
         raw_data = h5file['Acquisition/Raw[0]/RawData'][:, channels]
         raw_data = raw_data.T
         

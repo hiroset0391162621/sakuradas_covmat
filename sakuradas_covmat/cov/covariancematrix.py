@@ -138,13 +138,16 @@ class CovarianceMatrix(np.ndarray):
         return self[..., trii, trij]
 
 
-def calculate(stream, window_duration_sec, average, average_step=None, **kwargs):
+def calculate(stream, window_duration_sec, average, step, average_step=None, **kwargs):
 
     times, frequencies, spectra = stft(stream, window_duration_sec, **kwargs)
 
+
     # Parametrization
-    step = average//2  if average_step is None else int(average * average_step)
+    #step = average//2  if average_step is None else int(average * average_step)
     n_traces, n_windows, n_frequencies = spectra.shape
+    
+    
 
     # Times
     t_end = times[-1]
