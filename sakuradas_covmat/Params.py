@@ -1,10 +1,10 @@
 import datetime
-
+import numpy  as np
 
 fiber = 'nojiri' #'round'
 
-hdf5_starttime_jst = datetime.datetime(2023, 12, 1, 0, 0, 0)
-hdf5_endttime_jst = datetime.datetime(2023, 12, 1, 0, 10, 0)
+hdf5_starttime_jst = datetime.datetime(2025, 3, 27, 15, 20, 0)
+hdf5_endttime_jst = datetime.datetime(2025, 3, 27, 15, 30, 0)
 Nseconds = int( (hdf5_endttime_jst-hdf5_starttime_jst).total_seconds() )
 N_minute = int( (hdf5_endttime_jst - hdf5_starttime_jst).total_seconds() / 60.0 )
 
@@ -13,9 +13,10 @@ low_pass = 0.2
 high_pass = 50
 
 overlap = 0.5  ### [0,1] step for sliding main windows-> preproc_spectral_secs*overlap
-average = 10
-window_duration_sec = 5.0
+average = 20
+window_duration_sec = 20.0
 
 hdf5_dirname = "hdf5/"
 
-used_channel_list = [str(_).zfill(4) for _ in range(100, 805, 5)]   
+used_channel_list = [str(_).zfill(4) for _ in range(700, 800, 10)]   
+used_channel_num_list = np.array(used_channel_list, dtype=np.int64)
