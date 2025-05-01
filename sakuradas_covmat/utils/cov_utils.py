@@ -169,7 +169,7 @@ def network_covmat():
     #     # vmin=0,
     #     # vmax=4
     # )
-    cbar = plt.colorbar(img, ax=ax1)
+    cbar = plt.colorbar(img, ax=ax1, pad=0.01)
     cbar.set_label(
         "spectral width", fontsize=10
     )
@@ -206,7 +206,7 @@ def network_covmat_sakbin():
     average = 20
     window_duration_sec = 60.0
         
-    channels = list(range(1000,7825,1000))
+    channels = list(range(250,7825,250))
     print('used channels', channels)
     
     N_minute = int( (hdf5_endttime_jst - hdf5_starttime_jst).total_seconds() / 60.0 )
@@ -230,6 +230,8 @@ def network_covmat_sakbin():
         tr.stats.station = str(ch_idx).zfill(4)
         tr.stats.network = 'sak'
         stream_cov += tr
+        
+        del tr
     
     print(stream_cov)
     
@@ -253,6 +255,7 @@ def network_covmat_sakbin():
     )
     
     print('times', times)
+    print('frequencies', frequencies)
 
     # Spectral width
     spectral_width = covariances.coherence(kind="spectral_width")
@@ -269,13 +272,30 @@ def network_covmat_sakbin():
     print(xmin, xmax)
     ymin, ymax = frequencies[0], frequencies[-1]
     #x = np.linspace(xmin, xmax, nx + 1)
-    y = np.linspace(ymin, ymax, ny + 1)
+    #y = np.linspace(ymin, ymax, ny + 1)
     print(ymin, ymax)
-    X, Y = np.meshgrid(x, y)
-    img = ax1.pcolormesh(X, Y, spectral_width.T, cmap="RdYlBu", shading='auto', rasterized=True)
+    print('spectral_width min, max', np.nanmin(spectral_width), np.nanmax(spectral_width))
+    #X, Y = np.meshgrid(x, y)
+    #img = ax1.pcolormesh(X, Y, spectral_width.T, cmap="RdYlBu", shading='auto', rasterized=True)
     
+    img = ax1.imshow(
+        spectral_width.T,
+        origin="lower",
+        cmap="RdYlBu",
+        interpolation="none",
+        extent=[
+            xmin,
+            xmax,
+            ymin,
+            ymax,
+        ],
+        aspect="auto",
+        rasterized=True,
+        vmin=0.5,
+        vmax=5
+    )
     
-    cbar = plt.colorbar(img, ax=ax1, pad=0.02)
+    cbar = plt.colorbar(img, ax=ax1, pad=0.01)
     cbar.set_label(
         "spectral width", fontsize=10
     )
