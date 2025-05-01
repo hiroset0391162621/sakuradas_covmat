@@ -207,6 +207,7 @@ def network_covmat_sakbin():
     window_duration_sec = 60.0
         
     channels = list(range(250,7825,250))
+
     print('used channels', channels)
     
     N_minute = int( (hdf5_endttime_jst - hdf5_starttime_jst).total_seconds() / 60.0 )
