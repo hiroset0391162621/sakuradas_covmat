@@ -2,13 +2,13 @@ import glob
 import os
 import sys
 import datetime
-from obspy.core import Stream
+from obspy.core import Stream, Trace
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import dates as mdates
 import warnings
 warnings.simplefilter("ignore")
-
+from scipy.io import FortranFile
 try:
     import scienceplots
 except:
@@ -180,7 +180,6 @@ def network_covmat():
     )  # hide microseismic background noise below 0.5Hz
     ax1.set_ylabel("Frequency [Hz]", fontsize=12)
     ax1.set_yscale("log")
-    ax1.set_xlabel("Time [s]", fontsize=12)
     for spine in ax1.spines.values():
         spine.set_linewidth(1.5) 
     ax1.tick_params(axis='both', which='major', length=4, width=1)  
@@ -195,8 +194,114 @@ def network_covmat():
     plt.show()
     
 
+
+
+def network_covmat_sakbin():
+    
+    Fs = 50
+    low_pass = 0.1
+    high_pass = 2
+
+    overlap = 0.5  ### [0,1] step for sliding main windows-> preproc_spectral_secs*overlap
+    average = 20
+    window_duration_sec = 60.0
+        
+    channels = list(range(1000,7825,1000))
+    print('used channels', channels)
+    
+    N_minute = int( (hdf5_endttime_jst - hdf5_starttime_jst).total_seconds() / 60.0 )
+    windL = 60.0*N_minute
+    print("N_minute", N_minute)
+    
+    ts_jst = hdf5_starttime_jst
+    bin_dirname = "/Users/hirosetakashi/Volumes/noise_monitoring/noise_monitoring/DAS/sakuData_1d_2_onebit_nospatialstacking_strainrate/"+ts_jst.strftime("%Y")+"/"+ts_jst.strftime("%m")+"/"+ts_jst.strftime("%d")+"/" 
+    
+    
+    stream_cov = array_cov.ArrayStream()
+    
+    for ch_idx in channels: 
+    
+        f = FortranFile(bin_dirname+'sak'+str(ch_idx).zfill(4)+'.bin', 'r')
+        bin_data = f.read_record(dtype=float)
+        f.close()
+        tr = Trace(bin_data)
+        tr.stats.starttime = ts_jst
+        tr.stats.sampling_rate = Fs
+        tr.stats.station = str(ch_idx).zfill(4)
+        tr.stats.network = 'sak'
+        stream_cov += tr
+    
+    print(stream_cov)
+    
+    # frequency limits for filtering (depends on the target signal)
+    
+    sampling_rate = stream_cov[0].stats.sampling_rate  # assumes all streams have the same sampling rate
+
+
+    preproc_spectral_secs = (
+        window_duration_sec * average * overlap
+    )  # dT_main ### length of mainwindow: window_duration_sec * average * overlap
+    print('length of mainwindow: window_duration_sec * average * overlap', preproc_spectral_secs)
+    
+    
+    stream_plot = stream_cov.copy()
+    stream_cov.preprocess(domain="temporal", method="onebit")
+
+
+    times, frequencies, covariances = covariancematrix.calculate(
+        stream_cov, window_duration_sec, average, step=average, average_step=None
+    )
+    
+    print('times', times)
+
+    # Spectral width
+    spectral_width = covariances.coherence(kind="spectral_width")
+    
+    
+    fig = plt.figure(figsize=(10, 4), constrained_layout=True)
+    ax1 = fig.add_subplot(211)
+    ny, nx = spectral_width.T.shape
+    
+    taxis = [ hdf5_starttime_jst+datetime.timedelta(seconds=_) for _ in times ]
+    x = np.array([ mdates.date2num(_) for _ in taxis ])
+    xmin, xmax = x[0], x[-1]
+    #xmin, xmax = times[0], times[-1] + 1/Fs
+    print(xmin, xmax)
+    ymin, ymax = frequencies[0], frequencies[-1]
+    #x = np.linspace(xmin, xmax, nx + 1)
+    y = np.linspace(ymin, ymax, ny + 1)
+    print(ymin, ymax)
+    X, Y = np.meshgrid(x, y)
+    img = ax1.pcolormesh(X, Y, spectral_width.T, cmap="RdYlBu", shading='auto', rasterized=True)
+    
+    
+    cbar = plt.colorbar(img, ax=ax1, pad=0.02)
+    cbar.set_label(
+        "spectral width", fontsize=10
+    )
+    #ax1.set_xlim(0, windL)
+    ax1.set_xlim(hdf5_starttime_jst, hdf5_endttime_jst)
+    ax1.set_ylim(low_pass, high_pass)  # hide microseismic background noise below 0.5Hz
+    ax1.set_ylabel("Frequency [Hz]", fontsize=12)
+    ax1.set_yscale("log")
+    for spine in ax1.spines.values():
+        spine.set_linewidth(1.5) 
+    ax1.tick_params(axis='both', which='major', length=4, width=1)  
+    ax1.tick_params(axis='both', which='minor', length=2, width=0.75)
+    ax1.tick_params(which='both', direction='out')
+    
+    plt.suptitle(hdf5_starttime_jst.strftime("%Y-%m-%d %H:%M:%S") + " - " + stream_cov[0].stats.endtime.strftime("%Y-%m-%d %H:%M:%S"), fontsize=12)
+    
+    
+    os.makedirs('figure/round/', exist_ok=True)
+    plt.savefig('figure/round/specw_'+hdf5_starttime_jst.strftime("%Y%m%d")+"_"+str(Nseconds).zfill(4)+".pdf", dpi=300, bbox_inches='tight')
+    plt.show()
+    
     
 
 if __name__ == "__main__":
     
     network_covmat()
+    
+    
+    
