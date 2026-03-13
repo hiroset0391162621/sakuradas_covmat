@@ -47,7 +47,7 @@ def network_covmat(read_hdf5=True):
     missing_files = []
     for mm in range(N_minute):
         ts_utc = hdf5_starttime_utc + datetime.timedelta(minutes=mm)
-        hdf5_dirname = "/Users/hiroset/Volumes/data/sakura/das-r8/"+ts_utc.strftime("%m")+"/"+ts_utc.strftime("%d")+"/"  #"/Users/hirosetakashi/Volumes/noise_monitoring/noise_monitoring/DAS/Tohoku_15/Fiber-2_HDF5/"+ts_utc.strftime("%Y")+"/"+ts_utc.strftime("%m")+"/"+ts_utc.strftime("%d")+"/" 
+        hdf5_dirname = "/Volumes/data/sakura/das-r8/"+ts_utc.strftime("%m")+"/"+ts_utc.strftime("%d")+"/"  #"/Users/hirosetakashi/Volumes/noise_monitoring/noise_monitoring/DAS/Tohoku_15/Fiber-2_HDF5/"+ts_utc.strftime("%Y")+"/"+ts_utc.strftime("%m")+"/"+ts_utc.strftime("%d")+"/" 
         
         file_pattern = hdf5_dirname+"decimator_"+ts_utc.strftime("%Y-%m-%d_%H.%M")+".00_UTC"+".h5"
         matched_files = glob.glob(file_pattern)
@@ -131,7 +131,7 @@ def network_covmat(read_hdf5=True):
         optimal_chunksize = max(1, len(hdf5_file_list) // (max_workers * 4))
         # ファイルごとに処理時間が異なる可能性があるため、小さめのchunksizeで負荷分散
         chunksize = min(optimal_chunksize, 10) if len(hdf5_file_list) > 100 else 1
-        chunksize = 1
+        
         print(f"並列読み込み開始: {len(hdf5_file_list)}ファイル ({len(missing_files)}個欠損) x {len(used_channel_num_list)}チャネル")
         print(f"並列設定: max_workers={max_workers}, chunksize={chunksize}")
         with ThreadPoolExecutor(max_workers=max_workers) as executor:

@@ -47,7 +47,7 @@ def network_covmat(read_hdf5=True):
     missing_files = []
     for mm in range(N_minute):
         ts_utc = hdf5_starttime_utc + datetime.timedelta(minutes=mm)
-        hdf5_dirname = "/Users/hiroset/Volumes/data/sakura/das-r8/"+ts_utc.strftime("%m")+"/"+ts_utc.strftime("%d")+"/"  #"/Users/hirosetakashi/Volumes/noise_monitoring/noise_monitoring/DAS/Tohoku_15/Fiber-2_HDF5/"+ts_utc.strftime("%Y")+"/"+ts_utc.strftime("%m")+"/"+ts_utc.strftime("%d")+"/" 
+        hdf5_dirname = "/Users/hiroset//Volumes/data/sakura/das-r8/"+ts_utc.strftime("%m")+"/"+ts_utc.strftime("%d")+"/"  #"/Users/hirosetakashi/Volumes/noise_monitoring/noise_monitoring/DAS/Tohoku_15/Fiber-2_HDF5/"+ts_utc.strftime("%Y")+"/"+ts_utc.strftime("%m")+"/"+ts_utc.strftime("%d")+"/" 
         
         file_pattern = hdf5_dirname+"decimator_"+ts_utc.strftime("%Y-%m-%d_%H.%M")+".00_UTC"+".h5"
         matched_files = glob.glob(file_pattern)

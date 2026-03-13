@@ -162,6 +162,18 @@ def read_hdf5(filename, fiber, channels=None, n_jobs=1):
     return Stream(traces=traces)
 
 
+def _create_trace(idx, strain_data, channel_indices, start_time_jst, output_data_rate, network):
+    """Trace生成のヘルパー関数（並列化用）"""
+    channel_id = channel_indices[idx]
+    stats = {
+        "starttime": start_time_jst,
+        "sampling_rate": output_data_rate,
+        "channel": "X",
+        "network": network,
+        "station": str(int(channel_id)).zfill(4),
+    }
+    return Trace(data=strain_data[idx], header=stats)
+
 
 def read_hdf5_singlechannel(filename, fiber, channel_idx):
     
@@ -214,6 +226,30 @@ def read_hdf5_singlechannel(filename, fiber, channel_idx):
 
     return st_minute
 
+def read_multiple_hdf5(filenames, fiber, channels=None, n_jobs=4):
+    """
+    複数のHDF5ファイルを並列で読み込む
+    
+    Parameters
+    ----------
+    filenames : list of str
+        HDF5ファイルパスのリスト
+    fiber : str
+        'round' または 'nojiri'
+    channels : array-like, optional
+        読み込むチャネルのインデックス
+    n_jobs : int, default=4
+        並列処理に使用するプロセス数
+        
+    Returns
+    -------
+    list of obspy.Stream
+        各ファイルから読み込んだStreamオブジェクトのリスト
+    """
+    with ProcessPoolExecutor(max_workers=n_jobs) as executor:
+        read_fn = partial(read_hdf5, fiber=fiber, channels=channels, n_jobs=1)
+        streams = list(executor.map(read_fn, filenames))
+    return streams
 
 
 if __name__ == "__main__":

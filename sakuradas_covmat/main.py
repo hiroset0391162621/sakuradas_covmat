@@ -5,5 +5,5 @@ from cov_utils import network_covmat, network_covmat_sakbin
 
 if __name__ == "__main__":
     
-    #network_covmat()
-    network_covmat_sakbin()
+    network_covmat()
+    #network_covmat_sakbin()

@@ -18,11 +18,11 @@ average = 48
 window_duration_sec = 300.0 #10.0
 
 
-# overlap = 0.5  ### [0,1] step for sliding main windows-> preproc_spectral_secs*overlap
-# average = 20
-# window_duration_sec = 10.0
+overlap = 0.5  ### [0,1] step for sliding main windows-> preproc_spectral_secs*overlap
+average = 20
+window_duration_sec = 10.0
 
-hdf5_dirname =  "/Users/hiroset/Volumes/data/sakura/das-r8/" #"hdf5/"
+hdf5_dirname =  "/Volumes/data/sakura/das-r8/" #"hdf5/"
 
 used_channel_list = [str(_).zfill(4) for _ in range(100, 2500, 100)]   
 used_channel_num_list = np.array(used_channel_list, dtype=np.int64)

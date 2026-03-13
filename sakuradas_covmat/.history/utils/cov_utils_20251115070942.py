@@ -47,7 +47,7 @@ def network_covmat(read_hdf5=True):
     missing_files = []
     for mm in range(N_minute):
         ts_utc = hdf5_starttime_utc + datetime.timedelta(minutes=mm)
-        hdf5_dirname = "/Users/hiroset/Volumes/data/sakura/das-r8/"+ts_utc.strftime("%m")+"/"+ts_utc.strftime("%d")+"/"  #"/Users/hirosetakashi/Volumes/noise_monitoring/noise_monitoring/DAS/Tohoku_15/Fiber-2_HDF5/"+ts_utc.strftime("%Y")+"/"+ts_utc.strftime("%m")+"/"+ts_utc.strftime("%d")+"/" 
+        hdf5_dirname = "/Volumes/data/sakura/das-r8/"+ts_utc.strftime("%m")+"/"+ts_utc.strftime("%d")+"/"  #"/Users/hirosetakashi/Volumes/noise_monitoring/noise_monitoring/DAS/Tohoku_15/Fiber-2_HDF5/"+ts_utc.strftime("%Y")+"/"+ts_utc.strftime("%m")+"/"+ts_utc.strftime("%d")+"/" 
         
         file_pattern = hdf5_dirname+"decimator_"+ts_utc.strftime("%Y-%m-%d_%H.%M")+".00_UTC"+".h5"
         matched_files = glob.glob(file_pattern)
@@ -65,13 +65,13 @@ def network_covmat(read_hdf5=True):
         stream_minute = Stream()
         
         # 【高速化1】ファイルごとにチャネルをまとめて読み込む（HDF5ファイルの開閉を最小化）
-        def read_file_with_channels(filename, sampling_rate_original):
+        def read_file_with_channels(filename):
             """1つのHDF5ファイルから複数チャネルを一度に読み込む（ファイルがない場合はゼロ埋め）"""
             if filename is None:
                 # ファイルが存在しない場合、ゼロ埋めのStreamを作成
                 file_streams = Stream()
                 # 1分 = 60秒のデータを想定（元のサンプリングレートで）
-                sampling_rate = sampling_rate_original  # HDF5ファイルの元のサンプリングレート（適宜調整）
+                sampling_rate = 1000.0  # HDF5ファイルの元のサンプリングレート（適宜調整）
                 npts = int(60 * sampling_rate)  # 1分間のサンプル数
                 
                 for channel in used_channel_num_list:
@@ -90,52 +90,17 @@ def network_covmat(read_hdf5=True):
                     file_streams += tr
                 return file_streams
             else:
-                # 通常の読み込み（エラー処理付き）
-                try:
-                    file_streams = Stream()
-                    for channel in used_channel_num_list:
-                        file_streams += read_hdf5_singlechannel(filename, fiber, channel)
-                    return file_streams
-                except (OSError, IOError, PermissionError, Exception) as e:
-                    # ファイル読み込みエラー（破損、権限エラーなど）
-                    print(f"エラー: ファイル読み込み失敗 {filename}: {type(e).__name__}: {e}")
-                    print(f"  -> ゼロ埋めで代替します")
-                    
-                    # ゼロ埋めのStreamを返す
-                    file_streams = Stream()
-                    sampling_rate = sampling_rate_original
-                    npts = int(60 * sampling_rate)
-                    
-                    for channel in used_channel_num_list:
-                        zero_data = np.zeros(npts, dtype=np.float32)
-                        tr = Trace(zero_data)
-                        tr.stats.starttime = UTCDateTime(hdf5_starttime_jst)
-                        tr.stats.sampling_rate = sampling_rate
-                        if fiber == 'round':
-                            tr.stats.channel = "X"
-                            tr.stats.network = "SAK"
-                            tr.stats.station = str(channel).zfill(4)
-                        elif fiber == 'nojiri':
-                            tr.stats.channel = "X"
-                            tr.stats.network = "NOJ"
-                            tr.stats.station = str(channel).zfill(4)
-                        file_streams += tr
-                    return file_streams
+                # 通常の読み込み
+                file_streams = Stream()
+                for channel in used_channel_num_list:
+                    file_streams += read_hdf5_singlechannel(filename, fiber, channel)
+                return file_streams
         
         # 【高速化2】スレッド数を増やす（外付けストレージでも16-24が効果的）
         # 【高速化3】chunksize指定で効率的にタスクを配分
-        # chunksize設定方針：
-        # - タスク数が少ない、処理時間にばらつき → chunksize=1（負荷分散優先）
-        # - タスク数が多い、処理時間が均一 → chunksize=タスク数/(ワーカー数*4)（オーバーヘッド削減）
-        max_workers = 24
-        optimal_chunksize = max(1, len(hdf5_file_list) // (max_workers * 4))
-        # ファイルごとに処理時間が異なる可能性があるため、小さめのchunksizeで負荷分散
-        chunksize = min(optimal_chunksize, 10) if len(hdf5_file_list) > 100 else 1
-        chunksize = 1
         print(f"並列読み込み開始: {len(hdf5_file_list)}ファイル ({len(missing_files)}個欠損) x {len(used_channel_num_list)}チャネル")
-        print(f"並列設定: max_workers={max_workers}, chunksize={chunksize}")
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            stream_list = list(executor.map(read_file_with_channels, hdf5_file_list, [sampling_rate_original]*len(hdf5_file_list), chunksize=chunksize))
+        with ThreadPoolExecutor(max_workers=24) as executor:
+            stream_list = list(executor.map(read_file_with_channels, hdf5_file_list, chunksize=1))
         
         # Streamに統合（効率化）
         for stream in stream_list:
@@ -212,8 +177,8 @@ def network_covmat(read_hdf5=True):
     mseed_dir = 'mseed_data/sakura2022'
     os.makedirs(mseed_dir, exist_ok=True)
     mseed_filename = f'{mseed_dir}/filtered_{fiber}_{hdf5_starttime_jst.strftime("%Y%m%d-%H%M%S")}_{str(Nseconds).zfill(4)}.mseed'
-    print(f"mseed保存中: {mseed_filename}")
-    stream_cov.write(mseed_filename, format='MSEED')
+    # print(f"mseed保存中: {mseed_filename}")
+    # stream_cov.write(mseed_filename, format='MSEED')
     
     # mseedから読み込み
     print(f"mseed読み込み中: {mseed_filename}")
@@ -316,7 +281,7 @@ def network_covmat(read_hdf5=True):
     plt.savefig('figure/specw_sakura2022/specw_'+hdf5_starttime_jst.strftime("%Y%m%d-%H%M%S")+"_"+str(Nseconds).zfill(4)+".png", dpi=300, bbox_inches='tight')
     plt.close()
 
-    # ### save spectral_width data
+    ### save spectral_width data
     os.makedirs('specw_data/sakura2022', exist_ok=True)
     np.savez_compressed('specw_data/sakura2022/specw_'+fiber+'_'+hdf5_starttime_jst.strftime("%Y%m%d-%H%M%S")+"_"+str(Nseconds).zfill(4)+".npz",
                         datetime_num=x,
@@ -453,33 +418,31 @@ def network_covmat_sakbin():
 if __name__ == "__main__":
     
     t_starts = [
-        # datetime.datetime(2022, 11, 15, 0, 0),
-        # datetime.datetime(2022, 11, 16, 0, 0),
-        # datetime.datetime(2022, 11, 17, 0, 0),
-        # datetime.datetime(2022, 11, 18, 0, 0),
-        # datetime.datetime(2022, 11, 19, 0, 0),
-        # datetime.datetime(2022, 11, 20, 0, 0),
-        # datetime.datetime(2022, 11, 21, 0, 0),
-        #datetime.datetime(2022, 11, 22, 0, 0),
-        #datetime.datetime(2022, 11, 23, 0, 0), 
-        # datetime.datetime(2022, 11, 24, 0, 0),
-        # datetime.datetime(2022, 11, 25, 0, 0),
-        # datetime.datetime(2022, 11, 26, 0, 0),
-        # datetime.datetime(2022, 11, 27, 0, 0),
-        # datetime.datetime(2022, 11, 28, 0, 0), 
-        # datetime.datetime(2022, 11, 29, 0, 0),
-        # datetime.datetime(2022, 11, 30, 0, 0),
-        # datetime.datetime(2022, 12, 1, 0, 0),
-        datetime.datetime(2022, 12, 7, 0, 0), ### error
-        # datetime.datetime(2022, 12, 8, 0, 0, 0),
-        #datetime.datetime(2022, 12, 9, 0, 0, 0) ### error
+        datetime.datetime(2022, 11, 15, 0, 0),
+        datetime.datetime(2022, 11, 16, 0, 0),
+        datetime.datetime(2022, 11, 17, 0, 0),
+        datetime.datetime(2022, 11, 18, 0, 0),
+        datetime.datetime(2022, 11, 19, 0, 0),
+        datetime.datetime(2022, 11, 20, 0, 0),
+        datetime.datetime(2022, 11, 21, 0, 0),
+        datetime.datetime(2022, 11, 22, 0, 0),
+        datetime.datetime(2022, 11, 23, 0, 0),
+        datetime.datetime(2022, 11, 24, 0, 0),
+        datetime.datetime(2022, 11, 25, 0, 0),
+        datetime.datetime(2022, 11, 26, 0, 0),
+        datetime.datetime(2022, 11, 27, 0, 0),
+        datetime.datetime(2022, 11, 28, 0, 0), 
+        datetime.datetime(2022, 11, 29, 0, 0),
+        datetime.datetime(2022, 11, 30, 0, 0),
+        datetime.datetime(2022, 12, 1, 0, 0),
+        datetime.datetime(2022, 12, 7, 0, 0),
+        datetime.datetime(2022, 12, 8, 0, 0, 0),
+        datetime.datetime(2022, 12, 9, 0, 0, 0)
     ]
     
-    for dd in range(len(t_starts)):
-        hdf5_starttime_jst = t_starts[dd]
-        hdf5_endttime_jst = t_starts[dd] + datetime.timedelta(days=1)
-        network_covmat()
-    
+    hdf5_starttime_jst = datetime.datetime(2022, 12, 9, 0, 0, 0)
+    hdf5_endttime_jst = datetime.datetime(2022, 12, 10, 0, 0, 0) 
+    network_covmat()
     
     
     
